@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdio>
 #include <iostream>
 #include <sys/socket.h>
@@ -13,6 +15,10 @@
 #include "conf.h"
 #include "clientConnection.h"
 #include "event.h"
+#include "drpcChannel.h"
+#include "drpcController.h"
+#include "services.h"
+
 
 namespace drpc {
 class SimpleHost {
@@ -42,6 +48,10 @@ public:
     typedef std::shared_ptr<ClientConnection> SP_ClientConnection;
     std::vector<SP_ClientConnection> clients;
     std::queue<ConnectionEvent*> connection_event_queue;
+    DRpcChannel* channel;
+    google::protobuf::Service* service;
+    google::protobuf::RpcController* controller;
+    
 
 private:
     template<typename T>

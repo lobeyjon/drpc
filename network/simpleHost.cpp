@@ -10,6 +10,9 @@ SimpleHost::SimpleHost(time_t _timeout) {
     port=0;
     timeout=_timeout;
     clients.reserve(MAX_HOST_CLIENTS_INDEX+5);
+    service=new ServerServiceImpl();
+    controller=new DRpcController();
+    channel=new DRpcChannel(nullptr, service, controller);
 }
 
 SimpleHost::~SimpleHost() {
@@ -193,9 +196,10 @@ void SimpleHost::updateClients(time_t current) {
                 std::string data=clients[i]->recvData();
                 printf("updateClients recvData length is %d\n", data.size());
                 if(data=="") break;
-                drpc::Names *names=new drpc::Names();
-                names->ParseFromString(data);
-                std::cout<<"updateClients recvData: "<<names->name(0)<<" "<<names->name(1)<<" "<<names->name(2)<<std::endl;
+                
+                channel->client=clients[i].get();
+                channel->fromRequest(data);
+
                 connection_event_queue.push(new ConnectionEvent(NET_CONNECTION_DATA, clients[i]->hid, data));
                 clients[i]->active=current;
             }

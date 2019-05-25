@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdio>
 #include <sys/socket.h>
 #include <errno.h>
@@ -10,6 +12,7 @@
 #include <string>
 #include "conf.h"
 #include "packet.pb.h"
+#include "utils.h"
 
 namespace drpc {
 
@@ -47,8 +50,6 @@ private:
     std::string recvRaw(unsigned int size);
     bool inConn(int code);
     bool inErrd(int code);
-    void packHeader(unsigned int size, std::string& wsize);
-    void unpackHeader(const std::string& wsize, unsigned int& size);
 };
 
 }

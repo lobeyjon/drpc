@@ -141,26 +141,10 @@ bool ClientConnection::inErrd(int code) {
     return false;
 }
 
-void ClientConnection::packHeader(unsigned int size, std::string& wsize) {
-    wsize="";
-    for(int i=0;i<NET_HEAD_LENGTH_SIZE;++i) {
-        printf("packHeader %d %d\n", i, (unsigned char)(size>>(i*8)));
-        wsize+=(unsigned char)(size>>(i*8));
-    }
-}
-
-void ClientConnection::unpackHeader(const std::string& wsize, unsigned int& size) {
-    size=0;
-    for(int i=0;i<NET_HEAD_LENGTH_SIZE;++i) {
-        printf("unpackHeader %d %d\n", i, (unsigned char)(wsize[i])<<(i*8));
-        size+=(unsigned int)(wsize[i])<<(i*8);
-    }
-}
-
 int ClientConnection::sendData(std::string data) {
     unsigned int size=data.size()+NET_HEAD_LENGTH_SIZE;
     std::string wsize;
-    packHeader(size, wsize);
+    Utils::packUINT32(size, wsize);
     sendRaw(wsize+data);
     return 0;
 }
@@ -170,7 +154,7 @@ std::string ClientConnection::recvData() {
     printf("recvData header size is %d:%d\n", rsize.size(), NET_HEAD_LENGTH_SIZE);
     if(rsize.size()<NET_HEAD_LENGTH_SIZE) return "";
     unsigned int size;
-    unpackHeader(rsize, size);
+    Utils::unpackUINT32(rsize, size);
     printf("recvData total size is %d:%d\n", recv_buf.size(), size);
     if(recv_buf.size()<size) return "";
     recvRaw(NET_HEAD_LENGTH_SIZE);
@@ -233,7 +217,7 @@ int ClientConnection::tryRecv() {
 std::string ClientConnection::peekRaw(unsigned int size) {
     process();
     if(recv_buf.size()==0) return "";
-    printf("peekRaw size:%d recv_buf size:%d", size, recv_buf.size());
+    printf("peekRaw size:%d recv_buf size:%d\n", size, recv_buf.size());
     return recv_buf.substr(0, (size_t)std::min((size_t)size, recv_buf.size()));
 }
 
