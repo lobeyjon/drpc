@@ -1,0 +1,1 @@
+g++ -std=c++11 *.pb.cc *.pb.h simpleHost.h simpleHost.cpp event.h event.cpp clientConnection.h clientConnection.cpp testserver.cpp -o ../test/testserver -lprotobuf -pthread
