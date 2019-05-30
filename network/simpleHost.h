@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <iostream>
 #include <sys/socket.h>
+#include <sys/epoll.h>
 #include <errno.h>
 #include <string.h>
 #include <netinet/in.h>
@@ -12,6 +13,7 @@
 #include <string>
 #include <time.h>
 #include <memory>
+#include <unordered_map>
 #include "conf.h"
 #include "clientConnection.h"
 #include "event.h"
@@ -35,7 +37,8 @@ public:
     int closeClient(unsigned int hid);
     int clientNoDelay(unsigned int hid, int nodelay=0);
     int newClientConnect(time_t current);
-    void updateClients(time_t current);
+    ClientConnection* getClientByFd(int connect_fd);
+    void updateClient(time_t current, ClientConnection* client);
     int process();
 
 public:
@@ -43,6 +46,7 @@ public:
     int state;
     int index;
     int socket_fd;
+    int epoll_fd;
     int port;
     int timeout;
     typedef std::shared_ptr<ClientConnection> SP_ClientConnection;
@@ -51,6 +55,7 @@ public:
     DRpcChannel* channel;
     google::protobuf::Service* service;
     google::protobuf::RpcController* controller;
+    std::unordered_map<int, ClientConnection*> fdClientMap;
     
 
 private:

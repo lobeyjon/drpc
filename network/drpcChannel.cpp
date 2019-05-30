@@ -18,6 +18,7 @@ void DRpcChannel::CallMethod(const google::protobuf::MethodDescriptor* method,
                             google::protobuf::Message* response,
                             google::protobuf::Closure* done) {
                                 std::string type, data;
+                                std::cout<<"Call Remote Method: "<<method->name()<<std::endl;
                                 unsigned int method_idx=(unsigned int)method->index();
                                 Utils::packUINT32(method_idx, type);
                                 request->SerializeToString(&data);

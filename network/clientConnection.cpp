@@ -48,7 +48,7 @@ int ClientConnection::connectServer(const char* ip, int port) {
     }
     // Connect Server
     if(connect(connect_fd, (struct sockaddr*)&servaddr, sizeof(servaddr))<0) {
-        printf("Connect Error: %s(errno: %d)\n", strerror(errno), errno);
+        // printf("Connect Error: %s(errno: %d)\n", strerror(errno), errno);
     }
     state=NET_STATE_CONNECTING;
     errc=0;
@@ -109,14 +109,15 @@ int ClientConnection::process() {
 }
 
 int ClientConnection::tryConnect() {
-    printf("TryConnect state:%d\n", state);
+    // printf("TryConnect state:%d\n", state);
     if(state==NET_STATE_ESTABLISHED) return 1;
     if(state!=NET_STATE_CONNECTING) return -1;
     if(recv(connect_fd, (char*)recv_buf.c_str(), 0, 0)<0) {
-        printf("Recv Error: %s(errno: %d)\n", strerror(errno), errno);
+        // printf("Recv Error: %s(errno: %d)\n", strerror(errno), errno);
         if(inConn(errno)) return 0;
         if(inErrd(errno)) {
             state=NET_STATE_ESTABLISHED;
+            printf("Connect Established!\n");
             return 1;
         }
         close(connect_fd);
@@ -151,11 +152,11 @@ int ClientConnection::sendData(std::string data) {
 
 std::string ClientConnection::recvData() {
     std::string rsize = peekRaw(NET_HEAD_LENGTH_SIZE);
-    printf("recvData header size is %d:%d\n", rsize.size(), NET_HEAD_LENGTH_SIZE);
+    // printf("recvData header size is %d:%d\n", rsize.size(), NET_HEAD_LENGTH_SIZE);
     if(rsize.size()<NET_HEAD_LENGTH_SIZE) return "";
     unsigned int size;
     Utils::unpackUINT32(rsize, size);
-    printf("recvData total size is %d:%d\n", recv_buf.size(), size);
+    // printf("recvData total size is %d:%d\n", recv_buf.size(), size);
     if(recv_buf.size()<size) return "";
     recvRaw(NET_HEAD_LENGTH_SIZE);
     return recvRaw(size-NET_HEAD_LENGTH_SIZE);
@@ -170,7 +171,7 @@ int ClientConnection::sendRaw(std::string data) {
 int ClientConnection::trySend() {
     unsigned int wsize=0;
     if(send_buf.length()==0) {
-        printf("TrySend but nothing to send.\n");
+        // printf("TrySend but nothing to send.\n");
         return 0;
     }
     if((wsize=send(connect_fd, (char*)send_buf.c_str(), send_buf.size(), 0))<0) {
@@ -180,7 +181,7 @@ int ClientConnection::trySend() {
             return -1;
         }
     }
-    printf("Send Message Success, send size is:%d\n", wsize);
+    // printf("Send Message Success, send size is:%d\n", wsize);
     send_buf=send_buf.substr(wsize, send_buf.size()-wsize);
     return wsize;
 }
@@ -191,9 +192,9 @@ int ClientConnection::tryRecv() {
     while(1) {
         char text[2048];
         int recv_len=recv(connect_fd, text, 1024, 0);
-        printf("TryRecv %d\n", recv_len);
+        // printf("TryRecv %d\n", recv_len);
         if(recv_len<0) {
-            printf("TryRecv Error: %s(errno: %d)\n", strerror(errno), errno);
+            // printf("TryRecv Error: %s(errno: %d)\n", strerror(errno), errno);
             if(!inErrd(errno)) {
                 errc=errno;
                 closeClient();
@@ -207,17 +208,17 @@ int ClientConnection::tryRecv() {
         if(recv_len<=0) break;
         text[recv_len]='\0';
         rdata+=std::string(text, text+recv_len);
-        printf("tryRecv text length is %d, rdata size is %d\n", recv_len, rdata.size());
+        // printf("tryRecv text length is %d, rdata size is %d\n", recv_len, rdata.size());
     }
     recv_buf+=rdata;
-    printf("tryRecv recv_buf size is %d\n", recv_buf.size());
+    // printf("tryRecv recv_buf size is %d\n", recv_buf.size());
     return rdata.size();
 }
 
 std::string ClientConnection::peekRaw(unsigned int size) {
     process();
     if(recv_buf.size()==0) return "";
-    printf("peekRaw size:%d recv_buf size:%d\n", size, recv_buf.size());
+    // printf("peekRaw size:%d recv_buf size:%d\n", size, recv_buf.size());
     return recv_buf.substr(0, (size_t)std::min((size_t)size, recv_buf.size()));
 }
 

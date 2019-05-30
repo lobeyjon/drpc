@@ -7,6 +7,7 @@ SimpleHost::SimpleHost(time_t _timeout) {
     state=NET_STATE_STOP;
     index=1;
     socket_fd=0;
+    epoll_fd=0;
     port=0;
     timeout=_timeout;
     clients.reserve(MAX_HOST_CLIENTS_INDEX+5);
@@ -91,9 +92,26 @@ int SimpleHost::startup(int port) {
         printf("Set Non-Blocking Socket Error: %s(errno: %d)\n", strerror(errno), errno);
         return errno;
     }
+    // Create epoll
+    if((epoll_fd=epoll_create(MAX_HOST_CLIENTS_INDEX+1))==-1) {
+        close(epoll_fd);
+        printf("Create Epoll Error: %s(errno: %d)\n", strerror(errno), errno);
+        return errno;
+    }
+    // Add epoll control
+    struct epoll_event ev;
+    struct epoll_event events[MAX_HOST_CLIENTS_INDEX+1];
+    ev.events=EPOLLIN|EPOLLET;
+    ev.data.fd=socket_fd;
+    if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, socket_fd, &ev)==-1) {
+        printf("Add Epoll Control Error: %s(errno: %d)\n", strerror(errno), errno);
+        return errno;
+    }
+    // Get sock name
     memset(&servaddr, 0, sizeof(servaddr));
     socklen_t sockAddrLen=sizeof(servaddr);
     if(getsockname(socket_fd, (struct sockaddr*)&(servaddr), &sockAddrLen)<0) {
+        close(epoll_fd);
         close(socket_fd);
         printf("Get Socket Name Error: %s(errno: %d)\n", strerror(errno), errno);
         return errno;
@@ -105,11 +123,17 @@ int SimpleHost::startup(int port) {
 }
 
 int SimpleHost::shutdown() {
+    if(epoll_fd) {
+        if(close(epoll_fd)<0) {
+            printf("Close Epoll Error: %s(errno: %d)\n", strerror(errno), errno);
+        }
+    }
     if(socket_fd) {
         if(close(socket_fd)<0) {
             printf("Close Socket Error: %s(errno: %d)\n", strerror(errno), errno);
         }
     }
+    epoll_fd=0;
     socket_fd=0;
     index=1;
     for(int i=0;i<clients.size();++i)
@@ -155,6 +179,7 @@ int SimpleHost::clientNoDelay(unsigned int hid, int nodelay) {
 
 int SimpleHost::newClientConnect(time_t current) {
     int connect_fd=0;
+    // Accept Client Connection
     if((connect_fd=accept(socket_fd, (struct sockaddr*)nullptr, nullptr))==-1) {
         printf("Accept Connection Error: %s(errno: %d)\n", strerror(errno), errno);
         return errno;
@@ -168,6 +193,14 @@ int SimpleHost::newClientConnect(time_t current) {
     if(!connect_fd) {
         printf("Client Connections exceed %d\n", 0xffff);
         return -1;
+    }
+    // Add Epoll Control
+    struct epoll_event ev;
+    ev.events=EPOLLIN|EPOLLET;
+    ev.data.fd=connect_fd;
+    if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, connect_fd, &ev)<0) {
+        printf("Add Epoll Control Error: %s(errno: %d)\n", strerror(errno), errno);
+        return errno;
     }
     unsigned int hid;
     int pos;
@@ -185,41 +218,56 @@ int SimpleHost::newClientConnect(time_t current) {
     client->connaddr=connaddr;
     SP_ClientConnection p(client);
     clients[pos]=p;
+    fdClientMap[connect_fd]=client;
     connection_event_queue.push(new ConnectionEvent(NET_CONNECTION_NEW, hid, std::to_string((int)client->connaddr.sin_addr.s_addr)+std::to_string((int)client->connaddr.sin_port)));
 }
 
-void SimpleHost::updateClients(time_t current) {
-    for(int i=0;i<clients.size();++i) {
-        if(clients[i]!=nullptr) {
-            clients[i]->process();
-            while(clients[i]->state==NET_STATE_ESTABLISHED) {
-                std::string data=clients[i]->recvData();
-                printf("updateClients recvData length is %d\n", data.size());
-                if(data=="") break;
-                
-                channel->client=clients[i].get();
-                channel->fromRequest(data);
+ClientConnection* SimpleHost::getClientByFd(int connect_fd) {
+    if(fdClientMap.find(connect_fd)==fdClientMap.end()) {
+        return nullptr;
+    }
+    return fdClientMap[connect_fd];
+}
 
-                connection_event_queue.push(new ConnectionEvent(NET_CONNECTION_DATA, clients[i]->hid, data));
-                clients[i]->active=current;
-            }
-            time_t _timeout=current-clients[i]->active;
-            printf("updateClients check _timeout:%d timeout:%d\n", _timeout, timeout);
-            if(clients[i]->state==NET_STATE_STOP || _timeout>=timeout) {
-                connection_event_queue.push(new ConnectionEvent(NET_CONNECTION_LEAVE, clients[i]->hid, ""));
-                clients[i]->closeClient();
-                clients[i]=nullptr;
-            }
+void SimpleHost::updateClient(time_t current, ClientConnection* client) {
+    if(client!=nullptr) {
+        client->process();
+        while(client->state==NET_STATE_ESTABLISHED) {
+            std::string data=client->recvData();
+            // printf("updateClient recvData length is %d\n", data.size());
+            if(data=="") break;
+            
+            channel->client=client;
+            channel->fromRequest(data);
+
+            connection_event_queue.push(new ConnectionEvent(NET_CONNECTION_DATA, client->hid, data));
+            client->active=current;
+        }
+        time_t _timeout=current-client->active;
+        // printf("updateClient check _timeout:%d timeout:%d\n", _timeout, timeout);
+        if(client->state==NET_STATE_STOP || _timeout>=timeout) {
+            connection_event_queue.push(new ConnectionEvent(NET_CONNECTION_LEAVE, client->hid, ""));
+            client->closeClient();
+            client=nullptr;
         }
     }
 }
 
 int SimpleHost::process() {
-    printf("Process it!");
+    // printf("Process it!\n");
     time_t current=time(nullptr);
     if(state!=NET_STATE_ESTABLISHED) return 0;
-    newClientConnect(current);
-    updateClients(current);
+    // Epoll Events
+    int nfds;
+    struct epoll_event events[MAX_HOST_CLIENTS_INDEX+1];
+    if((nfds=epoll_wait(epoll_fd, events, MAX_HOST_CLIENTS_INDEX+1, 1000*1))<0) {
+        printf("Epoll Wait Error: %s(errno: %d)\n", strerror(errno), errno);
+        return errno;
+    }
+    for(int i=0;i<nfds;++i) {
+        if(events[i].data.fd==socket_fd) newClientConnect(current);
+        else updateClient(current, getClientByFd(events[i].data.fd));
+    }
 }
 
 }
