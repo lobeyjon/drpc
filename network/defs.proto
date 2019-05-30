@@ -1,0 +1,22 @@
+syntax = "proto2";
+
+package drpc;
+
+option cc_generic_services=true;
+
+message RPCHeader {
+    required string service_name=1;
+    required uint32 method_idx=2;
+}
+
+message HelloServerRequest {
+    required string text=1;
+}
+
+message HelloServerResponse {
+    required string text=1;
+}
+
+service ServerService {
+    rpc HelloServer(HelloServerRequest) returns (HelloServerResponse);
+}

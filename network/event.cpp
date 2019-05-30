@@ -10,11 +10,9 @@ Event::~Event() {
 
 }
 
-ConnectionEvent::ConnectionEvent(int connectionState, unsigned int hid, std::string data) {
+IOEvent::IOEvent(int _connectionState, unsigned int _hid, std::string _data): connectionState(_connectionState), hid(_hid), data(_data) {}
 
-}
-
-ConnectionEvent::~ConnectionEvent() {
+IOEvent::~IOEvent() {
 
 }
 

@@ -10,18 +10,13 @@ ServerServiceImpl::~ServerServiceImpl() {
 
 }
 
-void ServerServiceImpl::Hello(::google::protobuf::RpcController* controller,
-                       const ::drpc::HelloRequest* request,
-                       ::drpc::HelloResponse* response,
+void ServerServiceImpl::HelloServer(::google::protobuf::RpcController* controller,
+                       const ::drpc::HelloServerRequest* request,
+                       ::drpc::HelloServerResponse* response,
                        ::google::protobuf::Closure* done) {
-                            std::cout<<"RPC from client method:Hello request:"<<request->text()<<std::endl;
-                       }
-
-void ServerServiceImpl::Bye(::google::protobuf::RpcController* controller,
-                       const ::drpc::ByeRequest* request,
-                       ::drpc::ByeResponse* response,
-                       ::google::protobuf::Closure* done) {
-                           std::cout<<"RPC from client method: Bye request:"<<request->text()<<std::endl;
+                            std::cout<<"RPC from client, HelloServer request parameters are:"<<request->text()<<std::endl;
+                            response->set_text("RPC returns from server, HelloServer response");
+                            done->Run();
                        }
 
 }

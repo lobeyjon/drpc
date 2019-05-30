@@ -19,4 +19,4 @@ static const int NET_HEAD_LENGTH_SIZE=4;
 
 
 static const int UINT32_BYTE_SIZE=4;
-static const int NET_RPC_METHOD_SIZE=4;
+static const int NET_RPC_HEADER_SIZE=4;

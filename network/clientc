@@ -1,1 +1,1 @@
-g++ -std=c++11 *.pb.cc *.pb.h utils.h utils.cpp clientConnection.h clientConnection.cpp drpcChannel.h drpcChannel.cpp drpcController.h drpcController.cpp testclient.cpp -o ../test/testclient -lprotobuf -pthread
+g++ -std=c++11 *.pb.cc *.pb.h utils.h utils.cpp rpc_connector.h rpc_connector.cpp rpc_channel.h rpc_channel.cpp rpc_controller.h rpc_controller.cpp testclient.cpp -o ../test/testclient -lprotobuf -pthread

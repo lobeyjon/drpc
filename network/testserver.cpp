@@ -1,9 +1,6 @@
-#include "simpleHost.h"
+#include "server.h"
 
 int main() {
-    drpc::SimpleHost* host=new drpc::SimpleHost();
-    host->startup();
-    while(1) {
-        host->process();
-    }
+    drpc::Server server;
+    server.run();
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "servermethod.pb.h"
+#include "defs.pb.h"
 
 
 namespace drpc {
@@ -11,14 +11,9 @@ public:
     ServerServiceImpl();
     ~ServerServiceImpl();
 
-  virtual void Hello(::google::protobuf::RpcController* controller,
-                       const ::drpc::HelloRequest* request,
-                       ::drpc::HelloResponse* response,
-                       ::google::protobuf::Closure* done);
-
-  virtual void Bye(::google::protobuf::RpcController* controller,
-                       const ::drpc::ByeRequest* request,
-                       ::drpc::ByeResponse* response,
+  virtual void HelloServer(::google::protobuf::RpcController* controller,
+                       const ::drpc::HelloServerRequest* request,
+                       ::drpc::HelloServerResponse* response,
                        ::google::protobuf::Closure* done);
 };
 

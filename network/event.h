@@ -12,10 +12,14 @@ public:
 
 };
 
-class ConnectionEvent : public Event {
+class IOEvent : public Event {
 public:
-    ConnectionEvent(int connectionState, unsigned int hid, std::string data);
-    virtual ~ConnectionEvent();
+    IOEvent(int _connectionState, unsigned int _hid, std::string _data);
+    virtual ~IOEvent();
+public:
+    int connectionState;
+    unsigned int hid;
+    std::string data;
 };
 
 }
