@@ -1,0 +1,10 @@
+syntax = "proto2";
+
+package drpc;
+
+option cc_generic_services=true;
+
+message RPCHeader {
+    required string service_name=1;
+    required uint32 method_idx=2;
+}

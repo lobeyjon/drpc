@@ -5,7 +5,6 @@ namespace drpc {
 Server::Server() {
     host=new Host();
     dispatcher=new Dispatcher();
-    dispatcher->registerService(new ServerServiceImpl());
 }
 
 Server::~Server() {
@@ -20,6 +19,10 @@ void Server::run() {
     while(1) {
         tick();
     }
+}
+
+void Server::registerService(google::protobuf::Service* service) {
+    dispatcher->registerService(service);
 }
 
 void Server::tick() {

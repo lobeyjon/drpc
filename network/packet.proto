@@ -1,7 +1,0 @@
-syntax = "proto2";
-
-package drpc;
-
-message Names {
-    repeated string name=1;
-}

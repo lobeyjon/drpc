@@ -1,5 +1,4 @@
 #include "host.h"
-#include "services.h"
 #include "dispatcher.h"
 
 namespace drpc {
@@ -10,6 +9,7 @@ public:
     ~Server();
 
     void run();
+    void registerService(google::protobuf::Service* service);
 
 private:
     void tick();
