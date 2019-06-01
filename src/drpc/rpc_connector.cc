@@ -4,8 +4,10 @@ namespace drpc {
 
 Connector::Connector() {
     connect_fd=0;
+    epoll_fd=0;
     state=NET_STATE_STOP;
     errc=0;
+    is_listen_epoll_out=false;
 }
 
 Connector::Connector(const char* ip, int port) {
@@ -79,9 +81,38 @@ int Connector::setblocking(int block) {
     return 0;
 }
 
-int Connector::assign(int sock) {
+int Connector::setEpollIn() {
+    // Modify Epoll Control
+    struct epoll_event ev;
+    ev.events=EPOLLIN|EPOLLET;
+    ev.data.fd=connect_fd;
+    if(epoll_ctl(epoll_fd, EPOLL_CTL_MOD, connect_fd, &ev)<0) {
+        printf("Set EpollIn Control Error: %s(errno: %d)\n", strerror(errno), errno);
+        return errno;
+    }
+    is_listen_epoll_out=false;
+    printf("Set EpollIn Succeed.\n");
+    return 0;
+}
+
+int Connector::addEpollOut() {
+    // Modify Epoll Control
+    struct epoll_event ev;
+    ev.events=EPOLLIN|EPOLLOUT|EPOLLET;
+    ev.data.fd=connect_fd;
+    if(epoll_ctl(epoll_fd, EPOLL_CTL_MOD, connect_fd, &ev)<0) {
+        printf("Add EpollOut Control Error: %s(errno: %d)\n", strerror(errno), errno);
+        return errno;
+    }
+    is_listen_epoll_out=true;
+    printf("Add EpollOut Succeed.\n");
+    return 0;
+}
+
+int Connector::assign(int sock, int _epoll_fd) {
     closeConnector();
     connect_fd=sock;
+    epoll_fd=_epoll_fd;
     // Set Non-Blocking Socket
     int blocking;
     if(blocking=fcntl(connect_fd, F_GETFL, 0)<0) {
@@ -101,6 +132,15 @@ int Connector::assign(int sock) {
         printf("Set Socket Option Error: %s(errno: %d)\n", strerror(errno), errno);
         return errno;
     }
+    // Add Epoll Control
+    struct epoll_event ev;
+    ev.events=EPOLLIN|EPOLLET;
+    ev.data.fd=connect_fd;
+    if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, connect_fd, &ev)<0) {
+        printf("Set EpollIn Control Error: %s(errno: %d)\n", strerror(errno), errno);
+        return errno;
+    }
+    is_listen_epoll_out=false;
     state=NET_STATE_ESTABLISHED;
     return 0;
 }
@@ -196,8 +236,12 @@ int Connector::trySend() {
             return -1;
         }
     }
+    if(wsize<0) wsize=0;
     // printf("Send Message Success, send size is:%d\n", wsize);
     send_buf=send_buf.substr(wsize, send_buf.size()-wsize);
+    // if send_buf is not empty, means the send_buff in kernel is full, must listen the writable event by epoll
+    if(!send_buf.empty() && !is_listen_epoll_out) addEpollOut();
+    else if(is_listen_epoll_out) setEpollIn();
     return wsize;
 }
 

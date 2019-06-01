@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/epoll.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
@@ -25,7 +26,9 @@ public:
 
     int connectServer(const char* ip, int port);
     int closeConnector();
-    int assign(int sock);
+    int setEpollIn();
+    int addEpollOut();
+    int assign(int sock, int _epoll_fd);
     int nodelay(int nodelay);
     int process();
     int sendData(std::string data);
@@ -33,6 +36,7 @@ public:
     int setblocking(int block=0);
 
     int connect_fd;
+    int epoll_fd;
     std::string send_buf;
     std::string recv_buf;
     int state;
@@ -52,6 +56,7 @@ private:
     std::string recvRaw(unsigned int size);
     bool inConn(int code);
     bool inErrd(int code);
+    bool is_listen_epoll_out;
 };
 
 }

@@ -191,20 +191,12 @@ int Host::newConnector(time_t current) {
         printf("Client Connections exceed %d\n", 0xffff);
         return -1;
     }
-    // Add Epoll Control
-    struct epoll_event ev;
-    ev.events=EPOLLIN|EPOLLET;
-    ev.data.fd=connect_fd;
-    if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, connect_fd, &ev)<0) {
-        printf("Add Epoll Control Error: %s(errno: %d)\n", strerror(errno), errno);
-        return errno;
-    }
     unsigned int hid;
     int pos;
     generateID(hid, pos);
     printf("New Client connected: %d %d\n", hid, pos);
     Connector *connector=new Connector();
-    connector->assign(connect_fd);
+    connector->assign(connect_fd, epoll_fd);
     connector->hid=hid;
     connector->active=current;
     struct sockaddr_in connaddr;
