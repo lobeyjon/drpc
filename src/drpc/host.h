@@ -18,6 +18,7 @@
 #include "event.h"
 #include "rpc_channel.h"
 #include "rpc_controller.h"
+#include "msg_queue.h"
 
 
 namespace drpc {
@@ -49,12 +50,11 @@ public:
     int timeout;
     typedef std::shared_ptr<Connector> SP_Connector;
     std::vector<SP_Connector> connectors;
-    std::queue<IOEvent*> io_event_queue;
     std::unordered_map<int, Connector*> fdConnectorMap;
     
 
 private:
     template<typename T>
-    void clearQueue(std::queue<T> q);
+    void clearQueue(T* q);
 };
 }

@@ -5,26 +5,22 @@ namespace drpc {
 DoneParams::DoneParams(
     google::protobuf::Message* _request, 
     google::protobuf::Message* _response, 
-    Connector* _connector): request(_request), response(_response), connector(_connector) {
+    unsigned int _hid): request(_request), response(_response), hid(_hid) {
 }
 
 DoneParams::~DoneParams() {
-
 }
 
 Dispatcher::Dispatcher() {
-
+    
 }
 
-Dispatcher::~Dispatcher() {
-
-}
 
 void Dispatcher::registerService(google::protobuf::Service* service) {
     services[service->GetDescriptor()->name()]=service;
 }
 
-void Dispatcher::dispatch(Connector* connector, const std::string& data) {
+void Dispatcher::dispatch(unsigned int hid, const std::string& data) {
     std::string rpc_header_wsize=data.substr(0, NET_RPC_HEADER_SIZE);
     unsigned int rpc_header_size;
     Utils::unpackUINT32(rpc_header_wsize, rpc_header_size);
@@ -49,17 +45,23 @@ void Dispatcher::dispatch(Connector* connector, const std::string& data) {
         auto done = google::protobuf::NewCallback(
             this,
             &Dispatcher::onRespMsg,
-            DoneParams(request, response, connector));
+            DoneParams(request, response, hid));
         service->CallMethod(method, &controller, request, response, done);
     }
 }
 
 void Dispatcher::onRespMsg(DoneParams params) {
     std::string data;
-    if(params.response!=nullptr && params.connector!=nullptr) {
+    if(params.response!=nullptr) {
         params.response->SerializeToString(&data);
-        params.connector->sendData(data);
+        WriteMsgQueue::getInstance()->push(new IOEvent(-1, params.hid, data));
     }
 }
+
+Dispatcher* Dispatcher::getInstance() {
+    return m_instance;
+}
+
+Dispatcher* Dispatcher::m_instance=new Dispatcher;
 
 }

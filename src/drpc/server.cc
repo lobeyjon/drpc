@@ -4,14 +4,14 @@ namespace drpc {
     
 Server::Server() {
     host=new Host();
-    dispatcher=new Dispatcher();
+    work_thread_pool=new WorkThreadPool();
 }
 
 Server::~Server() {
     delete host;
     host=nullptr;
-    delete dispatcher;
-    dispatcher=nullptr;
+    delete work_thread_pool;
+    work_thread_pool=nullptr;
 }
 
 void Server::run() {
@@ -22,31 +22,11 @@ void Server::run() {
 }
 
 void Server::registerService(google::protobuf::Service* service) {
-    dispatcher->registerService(service);
+    Dispatcher::getInstance()->registerService(service);
 }
 
 void Server::tick() {
     host->process();
-    while(1) {
-        IOEvent* event=host->getEvent();
-        if(event==nullptr) {
-            break;
-        } 
-        else if(event->connectionState==NET_CONNECTION_NEW) {
-            //TODO
-        }
-        else if(event->connectionState==NET_CONNECTION_DATA) {
-            // std::cout<<"Dispatcher services"<<std::endl;
-            Connector* connector;
-            host->getConnector(event->hid, connector);
-            dispatcher->dispatch(connector, event->data);
-        }
-        else if(event->connectionState==NET_CONNECTION_LEAVE) {
-            //TODO
-        }
-        delete event;
-        event=nullptr;
-    }
 }
 
 }

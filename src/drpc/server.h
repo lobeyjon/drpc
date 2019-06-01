@@ -1,5 +1,7 @@
 #include "host.h"
 #include "dispatcher.h"
+#include "thread_pool.h"
+#include <boost/lockfree/queue.hpp>
 
 namespace drpc {
 
@@ -15,7 +17,8 @@ private:
     void tick();
 
     Host* host;
-    Dispatcher* dispatcher;
+    WorkThreadPool* work_thread_pool;
+    
 };
 
 }

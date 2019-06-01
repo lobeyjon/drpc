@@ -15,14 +15,13 @@ Host::Host(time_t _timeout) {
 
 Host::~Host() {
     // Delete events in event queue
-    clearQueue(io_event_queue);
+    clearQueue(ReadMsgQueue::getInstance());
 }
 
 template<typename T>
-void Host::clearQueue(std::queue<T> q) {
-    while(!q.empty()) {
-        delete q.front();
-        q.pop();
+void Host::clearQueue(T* q) {
+    while(!q->empty()) {
+        q->pop();
     }
 }
 
@@ -35,14 +34,6 @@ void Host::generateID(unsigned int& hid, int& pos) {
     hid=(pos & MAX_HOST_CLIENTS_INDEX) | (index << MAX_HOST_CLIENTS_BYTES);
     index+=1;
     if(index>=MAX_HOST_CLIENTS_INDEX) index=1;
-}
-
-// Get message event
-IOEvent* Host::getEvent() {
-    if(io_event_queue.empty()) return nullptr;
-    IOEvent* event=io_event_queue.front();
-    io_event_queue.pop();
-    return event;
 }
 
 // Startup Server
@@ -136,7 +127,7 @@ int Host::shutdown() {
     for(int i=0;i<connectors.size();++i)
         if(connectors[i]!=nullptr) connectors[i]->closeConnector();
     connectors.clear();
-    clearQueue(io_event_queue);
+    clearQueue(ReadMsgQueue::getInstance());
     state=NET_STATE_STOP;
     printf("Shutdown Server Success\n");
     return 0;
@@ -208,7 +199,7 @@ int Host::newConnector(time_t current) {
     SP_Connector p(connector);
     connectors[pos]=p;
     fdConnectorMap[connect_fd]=connector;
-    io_event_queue.push(new IOEvent(NET_CONNECTION_NEW, hid, std::to_string((int)connector->connaddr.sin_addr.s_addr)+std::to_string((int)connector->connaddr.sin_port)));
+    ReadMsgQueue::getInstance()->push(new IOEvent(NET_CONNECTION_NEW, hid, std::to_string((int)connector->connaddr.sin_addr.s_addr)+std::to_string((int)connector->connaddr.sin_port)));
 }
 
 Connector* Host::getConnectorByFd(int connect_fd) {
@@ -224,12 +215,12 @@ void Host::updateConnector(time_t current, Connector* connector) {
         while(connector->state==NET_STATE_ESTABLISHED) {
             std::string data=connector->recvData();
             if(data=="") break;
-            io_event_queue.push(new IOEvent(NET_CONNECTION_DATA, connector->hid, data));
+            ReadMsgQueue::getInstance()->push(new IOEvent(NET_CONNECTION_DATA, connector->hid, data));
             connector->active=current;
         }
         time_t _timeout=current-connector->active;
         if(connector->state==NET_STATE_STOP || _timeout>=timeout) {
-            io_event_queue.push(new IOEvent(NET_CONNECTION_LEAVE, connector->hid, ""));
+            ReadMsgQueue::getInstance()->push(new IOEvent(NET_CONNECTION_LEAVE, connector->hid, ""));
             connector->closeConnector();
             connector=nullptr;
         }
@@ -250,6 +241,17 @@ int Host::process() {
     for(int i=0;i<nfds;++i) {
         if(events[i].data.fd==socket_fd) newConnector(current);
         else updateConnector(current, getConnectorByFd(events[i].data.fd));
+    }
+    Connector* connector;
+    IOEvent* event;
+    while(WriteMsgQueue::getInstance()->pop(event)) {
+        if(getConnector(event->hid, connector)==0) {
+            connector->sendData(event->data);
+        }
+        if(event!=nullptr) {
+            delete event;
+            event=nullptr;
+        }
     }
 }
 
