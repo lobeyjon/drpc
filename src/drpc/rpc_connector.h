@@ -57,6 +57,7 @@ private:
     bool inConn(int code);
     bool inErrd(int code);
     bool is_listen_epoll_out;
+    bool is_client;
 };
 
 }

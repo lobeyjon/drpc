@@ -185,7 +185,7 @@ int Host::newConnector(time_t current) {
     unsigned int hid;
     int pos;
     generateID(hid, pos);
-    printf("New Client connected: %d %d\n", hid, pos);
+    // printf("New Client connected: %d %d\n", hid, pos);
     Connector *connector=new Connector();
     connector->assign(connect_fd, epoll_fd);
     connector->hid=hid;

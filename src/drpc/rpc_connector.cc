@@ -8,6 +8,7 @@ Connector::Connector() {
     state=NET_STATE_STOP;
     errc=0;
     is_listen_epoll_out=false;
+    is_client=true;
 }
 
 Connector::Connector(const char* ip, int port) {
@@ -141,6 +142,7 @@ int Connector::assign(int sock, int _epoll_fd) {
         return errno;
     }
     is_listen_epoll_out=false;
+    is_client=false;
     state=NET_STATE_ESTABLISHED;
     return 0;
 }
@@ -157,10 +159,11 @@ int Connector::nodelay(int nodelay=0) {
 }
 
 int Connector::process() {
-    if(state==NET_STATE_STOP) return 0;
+    if(state==NET_STATE_STOP) return -1;
     if(state==NET_STATE_CONNECTING) tryConnect();
     if(state==NET_STATE_ESTABLISHED) tryRecv();
     if(state==NET_STATE_ESTABLISHED) trySend();
+    return state==NET_STATE_ESTABLISHED?1:0;
 }
 
 int Connector::tryConnect() {
@@ -240,8 +243,10 @@ int Connector::trySend() {
     // printf("Send Message Success, send size is:%d\n", wsize);
     send_buf=send_buf.substr(wsize, send_buf.size()-wsize);
     // if send_buf is not empty, means the send_buff in kernel is full, must listen the writable event by epoll
-    if(!send_buf.empty() && !is_listen_epoll_out) addEpollOut();
-    else if(is_listen_epoll_out) setEpollIn();
+    if(!is_client) {
+        if(!send_buf.empty() && !is_listen_epoll_out) addEpollOut();
+        else if(is_listen_epoll_out) setEpollIn();
+    }
     return wsize;
 }
 

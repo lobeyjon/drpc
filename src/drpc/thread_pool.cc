@@ -28,13 +28,13 @@ void WorkThreadPool::workerThread() {
                 continue;
             }
             if(event->connectionState==NET_CONNECTION_NEW) {
-                //TODO
+                printf("New Client connected:%d\n", event->hid);
             }
             else if(event->connectionState==NET_CONNECTION_DATA) {
                 Dispatcher::getInstance()->dispatch(event->hid, event->data);
             }
             else if(event->connectionState==NET_CONNECTION_LEAVE) {
-                //TODO
+                printf("Disconnect with client:%d\n", event->hid);
             }
             delete event;
             event=nullptr;
