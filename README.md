@@ -28,6 +28,11 @@ service EchoServer {
     rpc Echo(EchoRequest) returns(EchoResponse);
 }
 ```
+compile and generate cpp file:
+
+    cd drpc/example/
+    protoc -I=. --cpp_out=. custom_file_name.proto
+
 #### 2. Implement your client-side code
 ```cpp
 void testRPC(drpc::Channel* channel) {
